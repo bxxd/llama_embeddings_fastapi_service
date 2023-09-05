@@ -5,7 +5,7 @@ import glob
 import json
 import logging
 import math
-import os 
+import os
 import random
 import re
 import shutil
@@ -82,7 +82,7 @@ else:
     USE_SECURITY_TOKEN = False
 DATABASE_URL = "sqlite+aiosqlite:///embeddings.sqlite"
 LLAMA_EMBEDDING_SERVER_LISTEN_PORT = config("LLAMA_EMBEDDING_SERVER_LISTEN_PORT", default=8089, cast=int)
-DEFAULT_MODEL_NAME = config("DEFAULT_MODEL_NAME", default="openchat_v3.2_super", cast=str) 
+DEFAULT_MODEL_NAME = config("DEFAULT_MODEL_NAME", default="openchat_v3.2_super", cast=str)
 LLM_CONTEXT_SIZE_IN_TOKENS = config("LLM_CONTEXT_SIZE_IN_TOKENS", default=512, cast=int)
 TEXT_COMPLETION_CONTEXT_SIZE_IN_TOKENS = config("TEXT_COMPLETION_CONTEXT_SIZE_IN_TOKENS", default=4000, cast=int)
 DEFAULT_MAX_COMPLETION_TOKENS = config("DEFAULT_MAX_COMPLETION_TOKENS", default=100, cast=int)
@@ -95,7 +95,7 @@ USE_RAMDISK = config("USE_RAMDISK", default=False, cast=bool)
 RAMDISK_PATH = config("RAMDISK_PATH", default="/mnt/ramdisk", cast=str)
 RAMDISK_SIZE_IN_GB = config("RAMDISK_SIZE_IN_GB", default=1, cast=int)
 MAX_RETRIES = config("MAX_RETRIES", default=3, cast=int)
-DB_WRITE_BATCH_SIZE = config("DB_WRITE_BATCH_SIZE", default=25, cast=int) 
+DB_WRITE_BATCH_SIZE = config("DB_WRITE_BATCH_SIZE", default=25, cast=int)
 RETRY_DELAY_BASE_SECONDS = config("RETRY_DELAY_BASE_SECONDS", default=1, cast=int)
 JITTER_FACTOR = config("JITTER_FACTOR", default=0.1, cast=float)
 BASE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -260,7 +260,7 @@ def check_that_user_has_required_permissions_to_manage_ramdisks():
         logger.info("Sorry, current user does not have sufficient permissions to manage RAM Disks! Disabling RAM Disks for now...")
         logger.debug(f"Permission check error detail: {e}")
         return False
-    
+
 def setup_ramdisk():
     cmd_check = f"sudo mount | grep {RAMDISK_PATH}" # Check if RAM disk already exists at the path
     result = subprocess.run(cmd_check, shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8')
@@ -373,7 +373,7 @@ def calculate_hoeffding(x: np.ndarray, y: np.ndarray, R, S) -> float: # Calculat
     D3 = np.sum(np.multiply(np.multiply((R - 2), (S - 2)), (Q - 1)))
     D = 30 * ((N[0] - 2) * (N[0] - 3) * D1 + D2 - 2 * (N[0] - 2) * D3) / (
             N[0] * (N[0] - 1) * (N[0] - 2) * (N[0] - 3) * (N[0] - 4))
-    return D  
+    return D
 
 def alternate_hoeffding_d(x: np.ndarray, y: np.ndarray) -> float:
     x = np.asarray(x, dtype=np.float64)
@@ -395,15 +395,15 @@ def bin_and_rank(x: np.ndarray, bins=50, strategy='quantile'):
         return rankdata(temp)
     else:
         return rankdata(x)
-    
+
 def compute_hsic_numpy(x: np.ndarray, y: np.ndarray):
     first_n_entries_to_use = 2000
     hsic = Hsic().test(x[0:first_n_entries_to_use], y[0:first_n_entries_to_use], workers=-1)
     return hsic[0]
 
 
-    
-# Core functions start here:    
+
+# Core functions start here:
 
 def download_models() -> List[str]:
     list_of_model_download_urls = [
@@ -411,7 +411,7 @@ def download_models() -> List[str]:
         'https://huggingface.co/TheBloke/Yarn-Llama-2-7B-128K-GGUF/resolve/main/yarn-llama-2-7b-128k.Q4_K_M.gguf',
         'https://huggingface.co/TheBloke/openchat_v3.2_super-GGUF/resolve/main/openchat_v3.2_super.Q4_K_M.gguf',
         'https://huggingface.co/TheBloke/Phind-CodeLlama-34B-Python-v1-GGUF/resolve/main/phind-codellama-34b-python-v1.Q4_K_M.gguf',
-        
+
     ]
     model_names = [os.path.basename(url) for url in list_of_model_download_urls]
     current_file_path = os.path.abspath(__file__)
@@ -459,7 +459,7 @@ async def _get_embedding_from_db(text_hash: str, llm_model_name: str) -> Optiona
             logger.info(f"Embedding found in database for text hash '{text_hash}' using model '{llm_model_name}'")
             return json.loads(embedding_json)
         return None
-    
+
 async def get_or_compute_embedding(request: EmbeddingRequest, req: Request = None, client_ip: str = None) -> dict:
     request_time = datetime.utcnow()  # Capture request time as datetime object
     ip_address = client_ip or (req.client.host if req else "localhost") # If client_ip is provided, use it; otherwise, try to get from req; if not available, default to "localhost"
@@ -516,8 +516,8 @@ def load_model(llm_model_name: str, raise_http_exception: bool = True):
             raise FileNotFoundError
         matching_files.sort(key=os.path.getmtime, reverse=True)
         model_file_path = matching_files[0]
-        model_instance = LlamaCppEmbeddings(model_path=model_file_path, use_mlock=True, n_ctx=LLM_CONTEXT_SIZE_IN_TOKENS)
-        model_instance.client.verbose = False
+        model_instance = LlamaCppEmbeddings(model_path=model_file_path, use_mlock=True, n_ctx=LLM_CONTEXT_SIZE_IN_TOKENS, n_gpu_layers=25)
+        model_instance.client.verbose = True
         embedding_model_cache[llm_model_name] = model_instance
         return model_instance
     except TypeError as e:
@@ -651,7 +651,7 @@ async def store_token_level_embeddings_in_db(token: str, llm_model_name: str, to
         token_level_embedding_bundle_id=token_level_embedding_bundle_id
     )
     await db_writer.enqueue_write([embedding]) # Enqueue the write operation for the token-level embedding
-        
+
 def calculate_sentence_embedding(llama: Llama, text: str) -> np.array:
     sentence_embedding = None
     retry_count = 0
@@ -743,7 +743,7 @@ async def store_document_embeddings_in_db(file: File, file_hash: str, original_f
                                                 response_time=datetime.utcnow(),
                                                 total_time=(datetime.utcnow() - request_time).total_seconds(),
                                                 document_id=document_embedding.id)
-            else:                               
+            else:
                 write_operations.append(embedding_entry)
         await db_writer.enqueue_write(write_operations) # Enqueue the write operation for text embeddings
 
@@ -770,7 +770,7 @@ def load_text_completion_model(llm_model_name: str, raise_http_exception: bool =
             raise HTTPException(status_code=404, detail="Model file not found")
         else:
             raise FileNotFoundError(f"No model file found matching: {llm_model_name}")
-        
+
 async def generate_completion_from_llm(request: TextCompletionRequest, req: Request = None, client_ip: str = None) -> List[TextCompletionResponse]:
     request_time = datetime.utcnow()
     logger.info(f"Starting text completion calculation using model: '{request.llm_model_name}'for input prompt: '{request.input_prompt}'")
@@ -815,7 +815,7 @@ async def generate_completion_from_llm(request: TextCompletionRequest, req: Requ
         list_of_responses.append(response)
     return list_of_responses
 
-@app.exception_handler(SQLAlchemyError) 
+@app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
     logger.exception(exc)
     return JSONResponse(status_code=500, content={"message": "Database error occurred"})
@@ -1004,16 +1004,16 @@ The request must contain the following attributes:
 
 ### Response:
 
-The response will include the input text for reference, and token-level embeddings matrix for the input text. The response is organized as a JSON array of objects, each containing a token and its corresponding embedding vector. 
+The response will include the input text for reference, and token-level embeddings matrix for the input text. The response is organized as a JSON array of objects, each containing a token and its corresponding embedding vector.
 Token level embeddings represent a text by breaking it down into individual tokens (words) and associating an embedding vector with each token. These embeddings capture the semantic and
-syntactic meaning of each token within the context of the text. Token level embeddings result in a matrix (number of tokens by embedding size), whereas a single embedding vector results 
+syntactic meaning of each token within the context of the text. Token level embeddings result in a matrix (number of tokens by embedding size), whereas a single embedding vector results
 in a one-dimensional vector of fixed size.
 
 The response will also include a combined feature vector derived from the the token-level embeddings matrix; this combined feature vector has the great benefit that it is always the same length
 for all input texts, regardless of length (whereas the token-level embeddings matrix will have a different number of rows for each input text, depending on the number of tokens in the text).
 The combined feature vector is obtained by calculating the column-wise means, mins, maxes, and standard deviations of the token-level embeddings matrix; thus if the token-level embedding vectors
 are of length `n`, the combined feature vector will be of length `4n`.
- 
+
 - `input_text`: The original input text.
 - `token_level_embedding_bundle`: Either a ZIP file containing the JSON file, or a direct JSON array containing the token-level embeddings and combined feature vector for the input text, depending on the value of `send_back_json_or_zip_file`.
 - `combined_feature_vector`: A list containing the combined feature vector, obtained by calculating the column-wise means, mins, maxes, and standard deviations of the token-level embeddings. This vector is always of length `4n`, where `n` is the length of the token-level embedding vectors.
@@ -1033,11 +1033,11 @@ are of length `n`, the combined feature vector will be of length `4n`.
 """,
           response_description="A JSON object containing the input text, token embeddings, and combined feature vector for the input text.")
 async def get_token_level_embeddings_matrix_and_combined_feature_vector_for_string(
-    request: EmbeddingRequest, 
+    request: EmbeddingRequest,
     db_writer: DatabaseWriter = Depends(get_db_writer),
-    req: Request = None, 
-    token: str = None, 
-    client_ip: str = None, 
+    req: Request = None,
+    token: str = None,
+    client_ip: str = None,
     json_format: str = 'records',
     send_back_json_or_zip_file: str = 'zip'
 ) -> Response:
@@ -1086,7 +1086,7 @@ async def get_token_level_embeddings_matrix_and_combined_feature_vector_for_stri
         embedding_bundle.token_level_embeddings_bundle_json = json_content
         embedding_bundle.response_time = response_time
         embedding_bundle.total_time = total_time
-        combined_feature_vector = await get_or_compute_token_level_embedding_bundle_combined_feature_vector(embedding_bundle.id, json_content, db_writer)        
+        combined_feature_vector = await get_or_compute_token_level_embedding_bundle_combined_feature_vector(embedding_bundle.id, json_content, db_writer)
         response_content = {
             'input_text': request.text,
             'token_level_embedding_bundle': json.loads(embedding_bundle.token_level_embeddings_bundle_json),
@@ -1110,7 +1110,7 @@ async def get_token_level_embeddings_matrix_and_combined_feature_vector_for_stri
             zip_file_path = f"/tmp/{output_file_name_without_extension}.zip"
             with zipfile.ZipFile(zip_file_path, 'w') as zipf:
                 zipf.write(json_file_path, os.path.basename(json_file_path))
-            logger.info(f"Now sending back ZIP file response for input text string {request.text} and model {request.llm_model_name}; First 100 characters of zipped JSON file out of {len(json_content)} total characters: {json_content[:100]}")                            
+            logger.info(f"Now sending back ZIP file response for input text string {request.text} and model {request.llm_model_name}; First 100 characters of zipped JSON file out of {len(json_content)} total characters: {json_content[:100]}")
             return FileResponse(zip_file_path, headers={"Content-Disposition": f"attachment; filename={output_file_name_without_extension}.zip"})
     except Exception as e:
         logger.error(f"An error occurred while processing the request: {e}")
@@ -1238,7 +1238,7 @@ The response will include the most similar strings found in the database, along 
 ### Example Response:
 ```json
 {
-  "query_text": "Find me the most similar string!",  
+  "query_text": "Find me the most similar string!",
   "results": [
     {"search_result_text": "This is the most similar string!", "similarity_to_query_text": 0.9823},
     {"search_result_text": "Another similar string.", "similarity_to_query_text": 0.9721},
@@ -1320,7 +1320,7 @@ async def get_all_embedding_vectors_for_document(file: UploadFile = File(...),
                                                  send_back_json_or_zip_file: str = 'zip',
                                                  req: Request = None) -> Response:
     client_ip = req.client.host if req else "localhost"
-    request_time = datetime.utcnow() 
+    request_time = datetime.utcnow()
     if USE_SECURITY_TOKEN and use_hardcoded_security_token and (token is None or token != SECURITY_TOKEN): raise HTTPException(status_code=403, detail="Unauthorized")
     temp_file_path = tempfile.mktemp() # Write uploaded file to a temporary file
     with open(temp_file_path, 'wb') as buffer:
@@ -1495,12 +1495,12 @@ async def startup_event():
     queue = asyncio.Queue()
     db_writer = DatabaseWriter(queue)
     await db_writer.initialize_processing_hashes()
-    asyncio.create_task(db_writer.dedicated_db_writer())    
+    asyncio.create_task(db_writer.dedicated_db_writer())
     global USE_RAMDISK
     if USE_RAMDISK and not check_that_user_has_required_permissions_to_manage_ramdisks():
         USE_RAMDISK = False
     elif USE_RAMDISK:
-        setup_ramdisk()    
+        setup_ramdisk()
     list_of_downloaded_model_names = download_models()
     for llm_model_name in list_of_downloaded_model_names:
         try:
